@@ -1,0 +1,64 @@
+---
+- name: Install NGINX on EC2
+  hosts: web
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Start and enable nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Deploy custom HTML
+      copy:
+        src: nginx-content/index.html
+        dest: /var/www/html/index.html
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    - name: Install ufw
+      apt:
+        name: ufw
+        state: present
+
+    - name: Allow SSH through the firewall
+      ufw:
+        rule: allow
+        name: OpenSSH
+
+    - name: Allow HTTP through the firewall
+      ufw:
+        rule: allow
+        port: '80'
+        proto: tcp
+
+    - name: Enable UFW firewall
+      ufw:
+        state: enabled
+        policy: allow
+    
+    - name: Create devops user
+      user:
+        name: devops
+        groups: sudo
+        append: yes
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Add authorized key for devops user
+      authorized_key:
+        user: devops
+        state: present
+        key: "{{ lookup('file', 'devops-key.pub') }}"
+
+
